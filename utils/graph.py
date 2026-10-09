@@ -304,144 +304,6 @@ def plot_alpha_comparison(
     return fig
 
 
-SAMPLE_COLORS = ("#2a78d6", "#eb6834", "#1baf7a", "#4a3aa7", "#e34948")
-
-
-def auto_linear_bins(samples: np.ndarray, max_bins: int = 10_000) -> int:
-    q25, q75 = np.percentile(samples, [25, 75])
-    width = 2 * (q75 - q25) / len(samples) ** (1 / 3)
-    return int(np.clip(np.ceil(np.ptp(samples) / width), 1, max_bins))
-
-
-def fit_log_log(x: np.ndarray, y: np.ndarray) -> tuple[float, float]:
-    slope, intercept = np.polyfit(np.log10(x), np.log10(y), deg=1)
-    return slope, intercept
-
-
-def add_fit(fig: go.Figure, row: int, col: int, x: np.ndarray, y: np.ndarray, color: str) -> None:
-    slope, intercept = fit_log_log(x, y)
-    x_fit = np.logspace(np.log10(x.min()), np.log10(x.max()), 500)
-    fig.add_trace(
-        go.Scatter(
-            x=x_fit,
-            y=10**intercept * x_fit**slope,
-            mode="lines",
-            line={"color": color, "width": 3, "dash": "dash"},
-        ),
-        row=row,
-        col=col,
-    )
-    fig.add_annotation(
-        text=f"MSE fit slope = {slope:.2f}",
-        x=0.98,
-        y=0.98,
-        xref="x domain",
-        yref="y domain",
-        xanchor="right",
-        yanchor="top",
-        showarrow=False,
-        font={"color": color},
-        row=row,
-        col=col,
-    )
-
-
-def plot_binning_comparison(
-    alpha: float,
-    x_min: float,
-    pdf: Curve,
-    ccdf: Curve,
-    samples: dict[int, np.ndarray],
-    linear_bins: int | None = None,
-) -> go.Figure:
-    _check_params(alpha, x_min)
-    sizes = sorted(samples)
-    fig = make_subplots(
-        rows=len(sizes),
-        cols=3,
-        subplot_titles=[
-            "linear bins, density",
-            "log bins, density",
-            "CCDF  1 - F(x) at log bin edges",
-        ]
-        + [""] * 3 * (len(sizes) - 1),
-        vertical_spacing=0.06,
-        horizontal_spacing=0.06,
-    )
-    color = SAMPLE_COLORS[0]
-    true_style = {"color": "black", "width": 2}
-    x_true = np.logspace(np.log10(x_min), np.log10(max(s.max() for s in samples.values())), 500)
-
-    for row, n in enumerate(sizes, start=1):
-        s = samples[n]
-        counts, edges = np.histogram(s, bins=linear_bins or auto_linear_bins(s))
-        width = edges[1] - edges[0]
-        nonzero = counts > 0  # empty bins cannot be drawn on a log axis
-        lin_x = ((edges[:-1] + edges[1:]) / 2)[nonzero]
-        lin_y = counts[nonzero] / (n * width)
-        log_x, log_y = log_binned_density(s, x_min)
-        log_x, log_y = log_x[log_y > 0], log_y[log_y > 0]
-        # empirical P(X >= b) at each log bin edge, the last edge can lie past the largest sample where it is 0
-        ccdf_x = log_bin_edges(x_min, s.max())
-        ccdf_y = 1 - np.searchsorted(np.sort(s), ccdf_x) / n
-        ccdf_x, ccdf_y = ccdf_x[ccdf_y > 0], ccdf_y[ccdf_y > 0]
-
-        panels = ((lin_x, lin_y, pdf), (log_x, log_y, pdf), (ccdf_x, ccdf_y, ccdf))
-        for col, (x, y, true) in enumerate(panels, start=1):
-            fig.add_trace(
-                go.Scatter(x=x_true, y=true(x_true), mode="lines", line=true_style),
-                row=row,
-                col=col,
-            )
-            fig.add_trace(
-                go.Scatter(x=x, y=y, mode="markers", marker={"color": color, "size": 8}),
-                row=row,
-                col=col,
-            )
-            add_fit(fig, row, col, x, y, color)
-            fig.update_xaxes(type="log", exponentformat="power", matches="x", row=row, col=col)
-            fig.update_yaxes(
-                type="log",
-                exponentformat="power",
-                matches="y3" if col == 3 else "y",
-                row=row,
-                col=col,
-            )
-
-        # a linear bin holding a single sample has density 1 / (N · Δx), the tail cannot go lower
-        floor = 1 / (n * width)
-        fig.add_hline(y=floor, line_dash="dot", line_color="gray", row=row, col=1)
-        fig.add_annotation(
-            text=f"1 sample per bin  (Δx = {width:.3g})",
-            x=0.02,
-            y=np.log10(floor),  # annotations on a log axis take log10 coordinates
-            xref="x domain",
-            yanchor="top",
-            xanchor="left",
-            showarrow=False,
-            font={"size": 11, "color": "#555"},
-            row=row,
-            col=1,
-        )
-        fig.update_yaxes(title_text=f"<b>N = {n:,}</b><br>p(x)  (log scale)", row=row, col=1)
-        fig.update_yaxes(title_text="1 - F(x)  (log scale)", row=row, col=3)
-
-    for col in (1, 2, 3):
-        fig.update_xaxes(title_text="x  (log scale)", row=len(sizes), col=col)
-    fig.update_layout(
-        title=(
-            f"Linear bins flatten the tail, log bins and the CCDF recover the slope  (α = {alpha:g})"
-            f"<br><sup>black: true curve, slope -α = {-alpha:g} for the density and -(α - 1) = {-(alpha - 1):g} for the CCDF, "
-            "dashed: least-squares fit in log-log</sup>"
-        ),
-        showlegend=False,
-        height=320 * len(sizes) + 100,
-        width=1500,
-        template="plotly_white",
-    )
-    return fig
-
-
 def plot_alpha_estimates(
     true_alpha: float,
     estimates: dict[str, dict[int, float]],
@@ -733,55 +595,32 @@ def plot_tail_comparison(
 ) -> go.Figure:
     n = len(tail)
     survival = 1 - (np.arange(1, n + 1) - 0.5) / n  # plotting positions
-    x_fit = np.logspace(np.log10(x_min), np.log10(tail[-1]), 300)
 
     fig = make_subplots(
         rows=1,
-        cols=3,
-        column_widths=[0.37, 0.37, 0.26],
+        cols=2,
+        column_widths=[0.6, 0.4],
         subplot_titles=(
-            "Survival within the tail P(X ≥ x | X ≥ x_min)",
             "Q-Q plot: model quantile vs observed",
             "Total population of the tail",
         ),
     )
-    fig.add_trace(
-        go.Scatter(
-            x=tail,
-            y=survival,
-            mode="markers",
-            marker={"size": 7, "color": MODEL_COLORS["data"], "opacity": 0.8},
-            name="municipalities",
-            text=names,
-            hovertemplate="%{text}<br>%{x:,}<extra></extra>",
-        ),
-        row=1,
-        col=1,
-    )
     for name, model in models.items():
         line = {"color": MODEL_COLORS[name], "width": 2}
-        fig.add_trace(
-            go.Scatter(
-                x=x_fit, y=model["sf"](x_fit), mode="lines", line=line, name=name, legendgroup=name
-            ),
-            row=1,
-            col=1,
-        )
         fig.add_trace(
             go.Scatter(
                 x=tail,
                 y=model["isf"](survival),
                 mode="markers",
                 marker={"size": 7, "color": line["color"], "opacity": 0.6},
-                legendgroup=name,
-                showlegend=False,
+                name=name,
                 text=names,
                 hovertemplate="%{text}<br>observed %{x:,}<br>"
                 + name
                 + " expects %{y:,.0f}<extra></extra>",
             ),
             row=1,
-            col=2,
+            col=1,
         )
     fig.add_trace(
         go.Scatter(
@@ -792,7 +631,7 @@ def plot_tail_comparison(
             name="perfect fit",
         ),
         row=1,
-        col=2,
+        col=1,
     )
     totals = {"observed": tail.sum()} | {name: model["total"] for name, model in models.items()}
     fig.add_trace(
@@ -811,28 +650,20 @@ def plot_tail_comparison(
             showlegend=False,
         ),
         row=1,
-        col=3,
+        col=2,
     )
 
-    fig.update_xaxes(title_text="inhabitants x (log scale)", row=1, col=1, **LOG_AXIS)
+    fig.update_xaxes(title_text="observed inhabitants (log scale)", row=1, col=1, **LOG_AXIS)
     fig.update_yaxes(
-        title_text="P(X ≥ x | X ≥ x_min) (log scale)",
-        range=[np.log10(0.5 / n), 0.05],
-        row=1,
-        col=1,
-        **LOG_AXIS,
-    )
-    fig.update_xaxes(title_text="observed inhabitants (log scale)", row=1, col=2, **LOG_AXIS)
-    fig.update_yaxes(
-        title_text="inhabitants expected by the model (log scale)", row=1, col=2, **LOG_AXIS
+        title_text="inhabitants expected by the model (log scale)", row=1, col=1, **LOG_AXIS
     )
     fig.update_yaxes(
-        title_text="inhabitants in the tail", range=[0, max(totals.values()) * 1.25], row=1, col=3
+        title_text="inhabitants in the tail", range=[0, max(totals.values()) * 1.25], row=1, col=2
     )
     fig.update_layout(
         title=f"Power law vs normal on the {n:,} municipalities with x ≥ {x_min:,.0f}<br><sup>normal: μ, σ from all municipalities, conditioned on x ≥ x_min</sup>",
         height=480,
-        width=1400,
+        width=1100,
         legend={"orientation": "h", "y": -0.2},
         template=REAL_WORLD_TEMPLATE,
     )
