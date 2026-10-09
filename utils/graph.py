@@ -2,6 +2,7 @@ from typing import Callable
 
 import numpy as np
 import plotly.graph_objects as go
+import polars as pl
 from plotly.subplots import make_subplots
 
 Curve = Callable[[np.ndarray], np.ndarray]
@@ -151,7 +152,6 @@ def plot_log_log(
     samples: np.ndarray,
     windows: list[float] | None = None,
 ) -> go.Figure:
-    """`log_pdf` maps X = log10(x) to Y = log10(p(x))."""
     _check_params(alpha, x_min)
 
     def pdf(x: np.ndarray) -> np.ndarray:
@@ -184,7 +184,6 @@ def plot_log_log(
     return fig
 
 
-# distinct hues, validated all-pairs since the lines cross, symbols as a second cue for colorblind readers
 ALPHA_COLORS = ("#2a78d6", "#e34948", "#008300", "#1baf7a", "#4a3aa7", "#eda100")
 ALPHA_SYMBOLS = ("circle", "square", "cross", "diamond", "triangle-up", "x")
 
@@ -205,11 +204,6 @@ def plot_alpha_comparison(
     log_log_curve: Callable[[float, np.ndarray], np.ndarray] | None = None,
     log_log_y_title: str = "",
 ) -> go.Figure:
-    """One line per alpha, `curve(alpha, x)` gives the y values.
-
-    `linear_panel` adds the same curves on linear axes to the left, cut at `linear_x_max`.
-    `log_log_curve` adds a different curve on log-log axes to the right, e.g. 1 - F(x) next to F(x).
-    """
     if len(alphas) > len(ALPHA_COLORS):
         raise ValueError(f"at most {len(ALPHA_COLORS)} alphas")
 
@@ -455,5 +449,245 @@ def plot_moments(
         height=500,
         width=1600,
         template="plotly_white",
+    )
+    return fig
+
+
+MODEL_COLORS = {"power law": "#3a6ea5", "normal": "#e76f51", "data": "#b8afa4"}
+SURFACE = "#fcfcfb"
+INK = {"primary": "#0b0b0b", "secondary": "#52514e", "muted": "#898781"}
+GUIDE = "#b5b3ab"
+REFERENCE_LINE = dict(line_dash="dash", line_color=GUIDE, line_width=1)
+RING = dict(color=SURFACE, width=1)
+
+REAL_WORLD_TEMPLATE = go.layout.Template(
+    layout=dict(
+        font=dict(family="system-ui, -apple-system, Segoe UI, sans-serif", color=INK["secondary"]),
+        title_font=dict(color=INK["primary"]),
+        paper_bgcolor=SURFACE,
+        plot_bgcolor=SURFACE,
+        xaxis=dict(gridcolor="#e1e0d9", linecolor="#c3c2b7", zerolinecolor="#c3c2b7", tickcolor="#c3c2b7", showline=True, ticks="outside"),
+        yaxis=dict(gridcolor="#e1e0d9", linecolor="#c3c2b7", zerolinecolor="#c3c2b7", tickcolor="#c3c2b7", showline=True, ticks="outside"),
+        hoverlabel=dict(bgcolor="white", font_color=INK["primary"]),
+    )
+)
+LOG_AXIS = dict(type="log", dtick=1, exponentformat="power")
+
+
+def plot_population_histogram(population: np.ndarray, bins: int = 100) -> go.Figure:
+    mean, median = population.mean(), np.median(population)
+    edges = np.logspace(np.log10(population.min()), np.log10(population.max()), bins + 1)
+    counts, _ = np.histogram(population, bins=edges)
+
+    fig = go.Figure(
+        go.Bar(
+            x=np.sqrt(edges[:-1] * edges[1:]),
+            y=counts,
+            width=np.diff(edges),
+            marker=dict(color=MODEL_COLORS["data"], line=dict(color=SURFACE, width=1)),
+            showlegend=False,
+        )
+    )
+    for value, label, side in ((median, "median", "left"), (mean, "mean", "right")):
+        fig.add_vline(x=value, line_color="black", line_dash="dash", line_width=2)
+        fig.add_annotation(
+            x=np.log10(value),  # annotations on a log axis take log10 coordinates
+            y=1,
+            yref="y domain",
+            text=f" {label} {value:,.0f} ",
+            font_color=INK["primary"],
+            xanchor="right" if side == "left" else "left",
+            yanchor="top",
+            showarrow=False,
+        )
+
+    fig.update_xaxes(title_text="inhabitants (log scale)", **LOG_AXIS)
+    fig.update_yaxes(title_text="number of municipalities")
+    fig.update_layout(
+        title=f"Distribution of municipality populations ({len(population):,} municipalities, logarithmic bins)",
+        bargap=0,
+        showlegend=False,
+        height=450,
+        width=900,
+        template=REAL_WORLD_TEMPLATE,
+    )
+    return fig
+
+
+def plot_rank_survival(sizes: np.ndarray, names: list[str], alpha: float, x_min: float) -> go.Figure:
+    n = len(sizes)
+    rank = np.arange(1, n + 1)
+    survival = rank / n  # P(X >= x)
+    share = np.cumsum(sizes) / sizes.sum()  # share held by the top `rank`
+    # the fit only describes x >= x_min, scale it by the tail's share to sit on the data
+    x_fit = np.logspace(np.log10(x_min), np.log10(sizes[0]), 200)
+    fitted = (sizes >= x_min).mean() * (x_fit / x_min) ** (1 - alpha)
+    data = dict(mode="markers", marker=dict(size=6, color=MODEL_COLORS["data"], opacity=0.8), text=names)
+
+    fig = make_subplots(rows=1, cols=3, subplot_titles=("Zipf plot: size vs rank", "Survival function P(X ≥ x)", "Sum share of the top fraction"))
+    fig.add_trace(go.Scatter(x=rank, y=sizes, name="municipalities", hovertemplate="%{text}<br>%{y:,}<extra></extra>", **data), row=1, col=1)
+    fig.add_trace(go.Scatter(x=sizes, y=survival, showlegend=False, hovertemplate="%{text}<br>%{x:,}<extra></extra>", **data), row=1, col=2)
+    fig.add_trace(
+        go.Scatter(x=x_fit, y=fitted, mode="lines", line=dict(color=MODEL_COLORS["power law"], width=2), name=f"power law, α = {alpha:.2f}"),
+        row=1,
+        col=2,
+    )
+    fig.add_vline(x=x_min, line_dash="dot", line_color=GUIDE, line_width=1, annotation_text=f"x_min = {x_min:,.0f}", row=1, col=2)
+    fig.add_trace(go.Scatter(x=survival, y=share, mode="lines", line=dict(color=MODEL_COLORS["data"], width=2), showlegend=False), row=1, col=3)
+    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode="lines", line=dict(dash="dot", color=GUIDE, width=1), name="equality"), row=1, col=3)
+    fig.add_vline(x=0.2, row=1, col=3, **REFERENCE_LINE)
+    fig.add_hline(y=0.8, row=1, col=3, **REFERENCE_LINE)
+
+    fig.update_xaxes(title_text="rank (log scale)", row=1, col=1, **LOG_AXIS)
+    fig.update_yaxes(title_text="inhabitants (log scale)", row=1, col=1, **LOG_AXIS)
+    fig.update_xaxes(title_text="inhabitants x (log scale)", row=1, col=2, **LOG_AXIS)
+    fig.update_yaxes(title_text="P(X ≥ x) (log scale)", row=1, col=2, **LOG_AXIS)
+    fig.update_xaxes(title_text="top fraction of municipalities", tickformat=".0%", range=[0, 1], row=1, col=3)
+    fig.update_yaxes(title_text="share of population", tickformat=".0%", range=[0, 1.02], row=1, col=3)
+    fig.update_layout(
+        title=f"Power law fit, α = {alpha:.2f} above x_min = {x_min:,.0f}<br><sup>top 20% of municipalities hold {share[int(0.2 * n) - 1]:.1%} of the population</sup>",
+        height=450,
+        width=1400,
+        legend=dict(orientation="h", y=-0.2),
+        template=REAL_WORLD_TEMPLATE,
+    )
+    return fig
+
+
+def plot_tail_comparison(tail: np.ndarray, names: list[str], x_min: float, models: dict[str, dict]) -> go.Figure:
+    n = len(tail)
+    survival = 1 - (np.arange(1, n + 1) - 0.5) / n  # plotting positions
+    x_fit = np.logspace(np.log10(x_min), np.log10(tail[-1]), 300)
+
+    fig = make_subplots(
+        rows=1,
+        cols=3,
+        column_widths=[0.37, 0.37, 0.26],
+        subplot_titles=("Survival within the tail P(X ≥ x | X ≥ x_min)", "Q-Q plot: model quantile vs observed", "Total population of the tail"),
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=tail,
+            y=survival,
+            mode="markers",
+            marker=dict(size=7, color=MODEL_COLORS["data"], opacity=0.8),
+            name="municipalities",
+            text=names,
+            hovertemplate="%{text}<br>%{x:,}<extra></extra>",
+        ),
+        row=1,
+        col=1,
+    )
+    for name, model in models.items():
+        line = dict(color=MODEL_COLORS[name], width=2)
+        fig.add_trace(go.Scatter(x=x_fit, y=model["sf"](x_fit), mode="lines", line=line, name=name, legendgroup=name), row=1, col=1)
+        fig.add_trace(
+            go.Scatter(
+                x=tail,
+                y=model["isf"](survival),
+                mode="markers",
+                marker=dict(size=7, color=line["color"], opacity=0.6),
+                legendgroup=name,
+                showlegend=False,
+                text=names,
+                hovertemplate="%{text}<br>observed %{x:,}<br>" + name + " expects %{y:,.0f}<extra></extra>",
+            ),
+            row=1,
+            col=2,
+        )
+    fig.add_trace(
+        go.Scatter(x=[x_min, tail[-1]], y=[x_min, tail[-1]], mode="lines", line=dict(dash="dash", color=GUIDE, width=1), name="perfect fit"),
+        row=1,
+        col=2,
+    )
+    totals = {"observed": tail.sum()} | {name: model["total"] for name, model in models.items()}
+    fig.add_trace(
+        go.Bar(
+            x=list(totals),
+            y=list(totals.values()),
+            marker=dict(color=[MODEL_COLORS.get(name, MODEL_COLORS["data"]) for name in totals], line=dict(color=SURFACE, width=2)),
+            width=0.5,
+            text=[f"{total / 1e6:.1f} M<br>({total / tail.sum():.0%})" for total in totals.values()],
+            textposition="outside",
+            showlegend=False,
+        ),
+        row=1,
+        col=3,
+    )
+
+    fig.update_xaxes(title_text="inhabitants x (log scale)", row=1, col=1, **LOG_AXIS)
+    fig.update_yaxes(title_text="P(X ≥ x | X ≥ x_min) (log scale)", range=[np.log10(0.5 / n), 0.05], row=1, col=1, **LOG_AXIS)
+    fig.update_xaxes(title_text="observed inhabitants (log scale)", row=1, col=2, **LOG_AXIS)
+    fig.update_yaxes(title_text="inhabitants expected by the model (log scale)", row=1, col=2, **LOG_AXIS)
+    fig.update_yaxes(title_text="inhabitants in the tail", range=[0, max(totals.values()) * 1.25], row=1, col=3)
+    fig.update_layout(
+        title=f"Power law vs normal on the {n:,} municipalities with x ≥ {x_min:,.0f}<br><sup>normal: μ, σ from all municipalities, conditioned on x ≥ x_min</sup>",
+        height=480,
+        width=1400,
+        legend=dict(orientation="h", y=-0.2),
+        template=REAL_WORLD_TEMPLATE,
+    )
+    return fig
+
+
+def band(experiment: pl.DataFrame, column: str) -> pl.DataFrame:
+    return (
+        experiment.group_by("sample_size")
+        .agg(pl.col(column).mean().alias("mean"), pl.col(column).std().alias("std"))
+        .with_columns(low=pl.col("mean") - pl.col("std"), high=pl.col("mean") + pl.col("std"))
+        .sort("sample_size")
+    )
+
+
+def add_band(fig: go.Figure, frame: pl.DataFrame, color: str, name: str, col: int) -> None:
+    x = frame["sample_size"].to_list()
+    rgb = ", ".join(str(int(color[i : i + 2], 16)) for i in (1, 3, 5))
+    fig.add_trace(go.Scatter(x=x, y=frame["high"].to_list(), mode="lines", line_width=0, showlegend=False, hoverinfo="skip"), row=1, col=col)
+    fig.add_trace(
+        go.Scatter(x=x, y=frame["low"].to_list(), mode="lines", line_width=0, fill="tonexty", fillcolor=f"rgba({rgb}, 0.15)", showlegend=False, hoverinfo="skip"),
+        row=1,
+        col=col,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=frame["mean"].to_list(),
+            mode="lines+markers",
+            line=dict(color=color, width=2),
+            marker=dict(size=8, line=RING),
+            name=name,
+            showlegend=False,
+            customdata=frame["std"].to_list(),
+            hovertemplate="n = %{x:,}<br>mean %{y:,.3g} ± %{customdata:,.3g}<extra></extra>",
+        ),
+        row=1,
+        col=col,
+    )
+
+
+SAMPLE_SIZE_AXIS = dict(title_text="sample size n (log scale)", **LOG_AXIS)
+
+
+def plot_sample_parameters(experiment: pl.DataFrame, full_data: dict) -> go.Figure:
+    repeats = experiment.filter(pl.col("sample_size") == experiment["sample_size"].min()).height
+    parameters = (("alpha", "α"), ("x_min", "x_min"))
+    fig = make_subplots(rows=1, cols=2, subplot_titles=[f"Fitted {label}" for _, label in parameters])
+    for col, (column, label) in enumerate(parameters, start=1):
+        add_band(fig, band(experiment, column), MODEL_COLORS["power law"], label, col=col)
+        fig.add_hline(
+            y=full_data[column],
+            annotation_text=f"full data: {full_data[column]:,.3g}",
+            annotation_position="top right",
+            row=1,
+            col=col,
+            **REFERENCE_LINE,
+        )
+        fig.update_yaxes(title_text=label, row=1, col=col)
+    fig.update_xaxes(**SAMPLE_SIZE_AXIS)
+    fig.update_layout(
+        title=f"Power law fits on random samples ({repeats} per size)<br><sup>line: mean, band: ± 1 std, dashed: full data</sup>",
+        height=450,
+        width=1400,
+        template=REAL_WORLD_TEMPLATE,
     )
     return fig
