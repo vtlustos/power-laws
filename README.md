@@ -2,6 +2,8 @@
 
 Experiments summarising how power-law distributions behave: the theory, simulations and a real-world example.
 
+![Power laws: Czech municipalities ranked by population follow one curve, from a few metropolises to many villages](images/main.jpg)
+
 I put this together to teach myself about power laws, whose unusual properties I find intriguing, and then shared what I learned in a talk to my colleagues. `00_presentation.html` is the teaser presentation from that talk.
 
 ## Contents
