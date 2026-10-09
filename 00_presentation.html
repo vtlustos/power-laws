@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Power Laws</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root {
+    --surface-0: #f3f2ee;
+    --surface-1: #fcfcfb;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #8a8984;
+    --grid: #e4e3de;
+    --axis: #b9b8b2;
+    --normal: #2a78d6;
+    --power: #eb6834;
+    --power-2: #1baf7a;
+    --accent: #eb6834;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--surface-0); color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif; }
+  .deck { height: 100%; display: grid; place-items: center; }
+  .slide { display: none; width: min(1200px, 96vw); height: min(675px, 90vh); background: var(--surface-1);
+    border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.08); padding: 48px 64px; overflow: hidden;
+    flex-direction: column; }
+  .slide.active { display: flex; }
+  h1 { font-size: 64px; margin: 0 0 12px; letter-spacing: -1px; }
+  h2 { font-size: 36px; margin: 0 0 20px; letter-spacing: -.5px; }
+  h3 { font-size: 20px; margin: 0 0 8px; }
+  p, li { font-size: 21px; line-height: 1.45; color: var(--text-secondary); }
+  ul { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 10px; }
+  strong { color: var(--text-primary); }
+  .kicker { text-transform: uppercase; letter-spacing: 2px; font-size: 14px; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; min-height: 0; align-items: center; }
+  .cols.wide-right { grid-template-columns: 5fr 7fr; }
+  .chart { position: relative; width: 100%; }
+  .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart text { font-family: inherit; }
+  .tooltip { position: absolute; pointer-events: none; background: var(--text-primary); color: #fff;
+    font-size: 13px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity .1s; }
+  .legend { display: flex; gap: 18px; font-size: 14px; color: var(--text-secondary); margin: 0 0 6px 56px; }
+  .legend span::before { content: ""; display: inline-block; width: 14px; height: 3px; border-radius: 2px;
+    background: var(--c); vertical-align: middle; margin-right: 6px; }
+  .callout { background: #fdf0ea; border-left: 4px solid var(--power); padding: 12px 16px; border-radius: 6px; font-size: 19px; color: var(--text-primary); }
+  .callout.blue { background: #eaf2fc; border-left-color: var(--normal); }
+  .eq { font-size: 26px; margin: 10px 0 14px; color: var(--text-primary); }
+  .grid-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .card { background: var(--surface-0); border-radius: 10px; padding: 14px 16px; }
+  .card h3 { font-size: 17px; }
+  .card p { font-size: 15px; margin: 0; line-height: 1.35; }
+  .card .alpha { font-size: 13px; color: var(--text-muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .person { display: grid; grid-template-columns: 88px 1fr; gap: 20px; align-items: start; margin-bottom: 26px; }
+  .year { font-size: 30px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+  .stat { background: var(--surface-0); border-radius: 10px; padding: 14px 16px; }
+  .stat .v { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 14px; color: var(--text-secondary); }
+  .source { font-size: 12px; color: var(--text-muted); margin-top: auto; padding-top: 8px; }
+  .footer { position: fixed; bottom: 14px; right: 22px; font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  button.ghost { font: inherit; font-size: 13px; color: var(--text-secondary); background: none; border: 1px solid var(--axis);
+    border-radius: 6px; padding: 3px 10px; cursor: pointer; margin-left: 56px; }
+  .title-slide { justify-content: center; }
+  .title-slide p { font-size: 26px; max-width: 760px; }
+  .agenda { display: grid; gap: 22px; max-width: 900px; }
+  .step { display: grid; grid-template-columns: 64px 1fr; gap: 20px; align-items: center; }
+  .step .num { width: 56px; height: 56px; border-radius: 50%; background: var(--power); color: #fff;
+    font-size: 26px; font-weight: 700; display: grid; place-items: center; }
+  .step p { margin: 0; }
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- 1 · Title -->
+<section class="slide title-slide">
+  <div class="kicker">Statistics in the wild</div>
+  <h1>Power Laws</h1>
+  <p>When the extremes are the rule, not the exception.</p>
+</section>
+
+<!-- 2 · Fat tails -->
+<section class="slide">
+  <div class="kicker">Observed everywhere in nature</div>
+  <h2>Fat tails</h2>
+  <div class="cols wide-right">
+    <div>
+      <ul>
+        <li>Extreme values are <strong>far more common</strong> than the bell curve predicts.</li>
+        <li>They are <strong>part of the data</strong>, not outliers.</li>
+      </ul>
+      <p class="callout">At 10× the typical value: normal says 10<sup>−23</sup>, power law says 1 %.</p>
+    </div>
+    <div>
+      <div class="legend"><span style="--c:var(--normal)">normal</span><span style="--c:var(--power)">power law</span></div>
+      <div class="chart" id="chart-tail"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · No finite moments -->
+<section class="slide">
+  <div class="kicker">The weird part</div>
+  <h2>No average, no deviation</h2>
+  <div class="cols wide-right">
+    <div>
+      <ul>
+        <li>The <strong>mean</strong> and <strong>standard deviation</strong> can be infinite.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="legend"><span style="--c:var(--normal)">normal</span><span style="--c:var(--power-2)">power law, finite mean</span><span style="--c:var(--power)">power law, infinite mean</span></div>
+      <div class="chart" id="chart-mean"></div>
+      <button class="ghost" id="resample">Draw new samples</button>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · Equation -->
+<section class="slide">
+  <div class="kicker">Normal vs. power law</div>
+  <h2>No characteristic value</h2>
+  <div class="cols">
+    <div>
+      <h3 style="color:var(--normal)">Normal</h3>
+      <div class="eq">$$p(x) \propto e^{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2}$$</div>
+      <p>Depends on the <strong>distance from the mean</strong>, in units of σ.</p>
+      <h3 style="color:var(--power); margin-top:18px">Power law</h3>
+      <div class="eq">$$p(x) \propto x^{-\alpha}$$</div>
+      <p>No mean, no σ. <strong>Just x to a constant power.</strong></p>
+    </div>
+    <div>
+      <div class="legend"><span style="--c:var(--normal)">normal</span><span style="--c:var(--power)">power law</span></div>
+      <div class="chart" id="chart-loglog"></div>
+      <p style="font-size:16px; margin:6px 0 0 56px">Power law = straight line on a log-log plot.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · History -->
+<section class="slide">
+  <div class="kicker">A bit of history</div>
+  <h2>Who discovered them</h2>
+  <div class="person">
+    <div class="year">1896</div>
+    <div>
+      <h3>Vilfredo Pareto: wealth</h3>
+      <p>The Italian economist noticed that <strong>20 % of people owned 80 % of the land</strong>, and the same pattern held in tax records of other countries. This gave us the 80/20 rule.</p>
+    </div>
+  </div>
+  <div class="person">
+    <div class="year">1949</div>
+    <div>
+      <h3>George K. Zipf: words and cities</h3>
+      <p>The Harvard linguist found that the 2nd most common word appears <strong>half as often</strong> as the 1st, the 3rd a third as often… The same holds for city sizes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · Examples -->
+<section class="slide">
+  <div class="kicker">Real-world examples</div>
+  <h2>Power laws are everywhere</h2>
+  <div class="grid-cards">
+    <div class="card"><h3>Words</h3><p>"the", "of", "and" fill a large share of any text.</p></div>
+    <div class="card"><h3>Cities</h3><p>A few megacities, thousands of villages.</p></div>
+    <div class="card"><h3>Wealth</h3><p>The richest are far above the "average".</p></div>
+    <div class="card"><h3>Earthquakes</h3><p>Many tremors, rare devastating quakes.</p></div>
+    <div class="card"><h3>Citations</h3><p>Most papers barely cited, a few cited 100 000×.</p></div>
+    <div class="card"><h3>Websites</h3><p>A few giants take most of the traffic.</p></div>
+    <div class="card"><h3>Wars</h3><p>One war can outweigh hundreds of others.</p></div>
+    <div class="card"><h3>Solar flares</h3><p>Intensity spans many orders of magnitude.</p></div>
+    <div class="card"><h3>Moon craters</h3><p>Many small, few huge impacts.</p></div>
+    <div class="card"><h3>Book sales</h3><p>Bestsellers sell millions, most titles hundreds.</p></div>
+    <div class="card"><h3>Surnames</h3><p>A few names shared by millions.</p></div>
+    <div class="card"><h3>Phone calls</h3><p>A few hubs receive most calls.</p></div>
+  </div>
+  <div class="source">M. E. J. Newman, “Power laws, Pareto distributions and Zipf’s law”, Contemporary Physics 46 (2005).</div>
+</section>
+
+<!-- 7 · Agenda -->
+<section class="slide title-slide">
+  <div class="kicker">What's next</div>
+  <h2>What we will talk about</h2>
+  <div class="agenda">
+    <div class="step"><div class="num">1</div><div><h3>Theory</h3><p>The math behind power laws.</p></div></div>
+    <div class="step"><div class="num">2</div><div><h3>Playground</h3><p>How synthetic power laws behave.</p></div></div>
+    <div class="step"><div class="num">3</div><div><h3>Real world</h3><p>Czech municipalities.</p></div></div>
+  </div>
+</section>
+
+<!-- 8 · Czech municipalities -->
+<section class="slide">
+  <div class="kicker">Our own example</div>
+  <h2>Czech municipalities</h2>
+  <div class="stats">
+    <div class="stat"><div class="v">453</div><div class="l">median population</div></div>
+    <div class="stat"><div class="v">1 744</div><div class="l">mean population</div></div>
+    <div class="stat"><div class="v">19 473</div><div class="l">standard deviation</div></div>
+  </div>
+  <div class="cols" style="align-items:start">
+    <ul>
+      <li>6 254 municipalities</li>
+      <li><strong>19 % of municipalities hold 80 % of people</strong></li>
+    </ul>
+    <div>
+      <p style="margin-top:0">Chance of a city as big as <strong>Prague</strong>?</p>
+      <p class="callout blue"><strong>Normal:</strong> 10<sup>−1118</sup>, "impossible"</p>
+      <p class="callout"><strong>Power law:</strong> 1 in ~2 000, expected</p>
+    </div>
+  </div>
+  <div class="source">Data: ČSÚ, Počet obyvatel v obcích k 1. 1. 2025.</div>
+</section>
+
+</div>
+<div class="footer" id="counter"></div>
+
+<script>
+// ---------- navigation ----------
+const slides = [...document.querySelectorAll(".slide")];
+let current = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1)) || 1) - 1));
+function show(i) {
+  current = Math.max(0, Math.min(slides.length - 1, i));
+  slides.forEach((s, j) => s.classList.toggle("active", j === current));
+  document.getElementById("counter").textContent = `${current + 1} / ${slides.length}`;
+  history.replaceState(null, "", `#${current + 1}`);
+}
+document.addEventListener("keydown", e => {
+  if (["ArrowRight", "PageDown", " "].includes(e.key)) show(current + 1);
+  if (["ArrowLeft", "PageUp"].includes(e.key)) show(current - 1);
+});
+document.addEventListener("click", e => {
+  if (e.target.closest("button, .chart")) return;
+  show(current + (e.clientX > innerWidth / 2 ? 1 : -1));
+});
+show(current);
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.renderMathInElement) renderMathInElement(document.body, {
+    delimiters: [{ left: "$$", right: "$$", display: true }, { left: "\\(", right: "\\)", display: false }],
+  });
+});
+
+// ---------- math ----------
+// complementary error function, fractional error < 1.2e-7 everywhere (Numerical Recipes erfcc)
+function erfc(x) {
+  const z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+  const r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 +
+    t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+  return x >= 0 ? r : 2 - r;
+}
+const normalSf = x => 0.5 * erfc(x / Math.SQRT2);
+const normalPdf = x => Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+
+function mulberry32(seed) {
+  return () => {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ---------- tiny SVG chart helper ----------
+const NS = "http://www.w3.org/2000/svg";
+const SUP = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+const pow10 = n => n === 0 ? "1" : n === 1 ? "10" : "10" + String(n).split("").map(c => SUP[c]).join("");
+const fmt = v => Math.abs(v) >= 0.01 && Math.abs(v) < 1e5 ? (+v.toPrecision(3)).toLocaleString("en") : v.toExponential(1);
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+function lineChart(container, { series, x, y, width = 640, height = 400 }) {
+  container.innerHTML = "";
+  const m = { top: 12, right: 24, bottom: 52, left: 64 };
+  const W = width - m.left - m.right, H = height - m.top - m.bottom;
+  const scale = (ax, size, flip) => {
+    const f = ax.log ? Math.log10 : v => v;
+    const [a, b] = ax.domain.map(f);
+    return v => { const t = (f(v) - a) / (b - a); return flip ? size * (1 - t) : size * t; };
+  };
+  const sx = scale(x, W), sy = scale(y, H, true);
+  const svg = el("svg", { viewBox: `0 0 ${width} ${height}`, role: "img" }, container);
+  const g = el("g", { transform: `translate(${m.left},${m.top})` }, svg);
+
+  // grid + ticks
+  const tickStyle = { "font-size": 13, fill: "var(--text-secondary)" };
+  y.ticks.forEach(t => {
+    el("line", { x1: 0, x2: W, y1: sy(t), y2: sy(t), stroke: "var(--grid)" }, g);
+    el("text", { x: -8, y: sy(t), "text-anchor": "end", "dominant-baseline": "middle", ...tickStyle }, g).textContent = y.label(t);
+  });
+  x.ticks.forEach(t => {
+    el("text", { x: sx(t), y: H + 20, "text-anchor": "middle", ...tickStyle }, g).textContent = x.label(t);
+  });
+  el("line", { x1: 0, x2: W, y1: H, y2: H, stroke: "var(--axis)" }, g);
+  el("text", { x: W / 2, y: H + 44, "text-anchor": "middle", "font-size": 14, fill: "var(--text-primary)" }, g).textContent = x.title;
+  el("text", { transform: `translate(${-50},${H / 2}) rotate(-90)`, "text-anchor": "middle", "font-size": 14, fill: "var(--text-primary)" }, g).textContent = y.title;
+
+  // clip + lines
+  const id = "clip" + Math.random().toString(36).slice(2);
+  el("rect", { x: 0, y: 0, width: W, height: H }, el("clipPath", { id }, el("defs", {}, svg)));
+  const plot = el("g", { "clip-path": `url(#${id})` }, g);
+  series.forEach(s => {
+    const pts = s.points.filter(([px, py]) => isFinite(py) && py > (y.log ? 0 : -Infinity));
+    el("path", { d: "M" + pts.map(([px, py]) => `${sx(px).toFixed(1)},${sy(py).toFixed(1)}`).join("L"),
+      fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round" }, plot);
+  });
+
+  // crosshair + tooltip
+  const tip = document.createElement("div"); tip.className = "tooltip"; container.appendChild(tip);
+  const cross = el("line", { y1: 0, y2: H, stroke: "var(--text-muted)", "stroke-dasharray": "3 3", opacity: 0 }, g);
+  const dots = series.map(s => el("circle", { r: 4.5, fill: s.color, stroke: "var(--surface-1)", "stroke-width": 2, opacity: 0 }, g));
+  const hit = el("rect", { x: 0, y: 0, width: W, height: H, fill: "transparent" }, g);
+  hit.addEventListener("mousemove", ev => {
+    const r = svg.getBoundingClientRect(), k = width / r.width;
+    const px = (ev.clientX - r.left) * k - m.left;
+    let rows = [];
+    series.forEach((s, i) => {
+      let best = s.points[0];
+      for (const p of s.points) if (Math.abs(sx(p[0]) - px) < Math.abs(sx(best[0]) - px)) best = p;
+      const visible = isFinite(best[1]) && best[1] > (y.log ? 0 : -Infinity);
+      const cy = sy(best[1]);
+      dots[i].setAttribute("cx", sx(best[0])); dots[i].setAttribute("cy", cy);
+      dots[i].setAttribute("opacity", visible && cy >= 0 && cy <= H ? 1 : 0);
+      rows.push(`<span style="color:${s.color}">●</span> ${s.name}: ${best[1] > 0 || !y.log ? fmt(best[1]) : "≈ 0"}`);
+      if (i === 0) { cross.setAttribute("x1", sx(best[0])); cross.setAttribute("x2", sx(best[0])); rows.unshift(`${x.short} = ${fmt(best[0])}`); }
+    });
+    cross.setAttribute("opacity", 1);
+    tip.innerHTML = rows.join("<br>"); tip.style.opacity = 1;
+    const cw = container.clientWidth, left = (px + m.left) / k;
+    tip.style.left = (left > cw * 0.6 ? left - tip.offsetWidth - 14 : left + 14) + "px";
+    tip.style.top = (m.top / k + 8) + "px";
+  });
+  hit.addEventListener("mouseleave", () => { tip.style.opacity = 0; cross.setAttribute("opacity", 0); dots.forEach(d => d.setAttribute("opacity", 0)); });
+}
+
+const range = (a, b, n, log) => Array.from({ length: n }, (_, i) => log
+  ? 10 ** (Math.log10(a) + (Math.log10(b) - Math.log10(a)) * i / (n - 1))
+  : a + (b - a) * i / (n - 1));
+
+// ---------- chart 1: survival function ----------
+{
+  const xs = range(1, 10, 200);
+  lineChart(document.getElementById("chart-tail"), {
+    series: [
+      { name: "normal", color: "var(--normal)", points: xs.map(x => [x, normalSf(x)]) },
+      { name: "power law", color: "var(--power)", points: xs.map(x => [x, x ** -2]) },
+    ],
+    x: { domain: [1, 10], ticks: [1, 2, 4, 6, 8, 10], label: String, title: "x (multiples of the typical value)", short: "x" },
+    y: { log: true, domain: [1e-24, 1], ticks: [0, -4, -8, -12, -16, -20, -24].map(n => 10 ** n),
+      label: t => pow10(Math.round(Math.log10(t))), title: "P(X ≥ x)  (log scale)" },
+  });
+}
+
+// ---------- chart 2: running mean ----------
+function drawMean(seed) {
+  const N = 100000, rnd = mulberry32(seed);
+  const checkpoints = new Set(range(1, N, 300, true).map(Math.round));
+  const sums = [0, 0, 0], pts = [[], [], []];
+  for (let n = 1; n <= N; n++) {
+    const u1 = rnd() || 1e-12, u2 = rnd();
+    sums[0] += 3 + Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    const u = rnd() || 1e-12;
+    sums[1] += u ** (-1 / 1.5);          // α = 2.5, x_min = 1 → mean 3
+    sums[2] += 1.25 * u ** (-1 / 0.8);   // α = 1.8, same uniform draw → mean ∞
+    if (checkpoints.has(n)) sums.forEach((s, i) => pts[i].push([n, s / n]));
+  }
+  lineChart(document.getElementById("chart-mean"), {
+    series: [
+      { name: "normal", color: "var(--normal)", points: pts[0] },
+      { name: "finite mean", color: "var(--power-2)", points: pts[1] },
+      { name: "infinite mean", color: "var(--power)", points: pts[2] },
+    ],
+    x: { log: true, domain: [1, N], ticks: [0, 1, 2, 3, 4, 5].map(n => 10 ** n),
+      label: t => pow10(Math.round(Math.log10(t))), title: "number of samples n  (log scale)", short: "n" },
+    y: { log: true, domain: [1, 1000], ticks: [1, 10, 100, 1000],
+      label: t => pow10(Math.round(Math.log10(t))), title: "running sample mean  (log scale)" },
+  });
+}
+let seed = 7;
+drawMean(seed);
+document.getElementById("resample").addEventListener("click", () => drawMean(++seed));
+
+// ---------- chart 3: log-log pdf ----------
+{
+  const xs = range(1, 100, 200, true);
+  lineChart(document.getElementById("chart-loglog"), {
+    series: [
+      { name: "normal", color: "var(--normal)", points: xs.map(x => [x, normalPdf((x - 1) / 2) / 2]) },
+      { name: "power law", color: "var(--power)", points: xs.map(x => [x, 2 * x ** -3]) },
+    ],
+    x: { log: true, domain: [1, 100], ticks: [1, 10, 100], label: t => pow10(Math.round(Math.log10(t))), title: "x  (log scale)", short: "x" },
+    y: { log: true, domain: [1e-10, 1], ticks: [0, -2, -4, -6, -8, -10].map(n => 10 ** n),
+      label: t => pow10(Math.round(Math.log10(t))), title: "p(x)  (log scale)" },
+    height: 380,
+  });
+}
+</script>
+</body>
+</html>
