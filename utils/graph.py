@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import plotly.graph_objects as go
@@ -29,7 +29,9 @@ def add_cdf(fig: go.Figure, col: int, cdf: Curve, x_min: float, x: np.ndarray) -
 
 def add_sum_share(fig: go.Figure, col: int, share: Curve, n: int = 500) -> None:
     q = np.linspace(0, 1, n)
-    fig.add_trace(go.Scatter(x=q, y=q, mode="lines", line_dash="dot", line_color="gray"), row=1, col=col)
+    fig.add_trace(
+        go.Scatter(x=q, y=q, mode="lines", line_dash="dot", line_color="gray"), row=1, col=col
+    )
     fig.add_trace(go.Scatter(x=q, y=share(q), mode="lines"), row=1, col=col)
     fig.add_vline(x=0.2, line_dash="dash", line_color="firebrick", row=1, col=col)
     fig.add_hline(y=0.8, line_dash="dash", line_color="firebrick", row=1, col=col)
@@ -84,7 +86,9 @@ def log_bin_edges(x_min: float, x_max: float, bins_per_decade: int = 5) -> np.nd
     return x_min * np.logspace(0, decades, int(np.ceil(decades * bins_per_decade)) + 1)
 
 
-def log_binned_density(samples: np.ndarray, x_min: float, bins_per_decade: int = 5) -> tuple[np.ndarray, np.ndarray]:
+def log_binned_density(
+    samples: np.ndarray, x_min: float, bins_per_decade: int = 5
+) -> tuple[np.ndarray, np.ndarray]:
     edges = log_bin_edges(x_min, samples.max(), bins_per_decade)
     counts, _ = np.histogram(samples, bins=edges)
     density = counts / (len(samples) * np.diff(edges))
@@ -93,7 +97,13 @@ def log_binned_density(samples: np.ndarray, x_min: float, bins_per_decade: int =
 
 
 def add_log_log(
-    fig: go.Figure, col: int, pdf: Curve, samples: np.ndarray, x_min: float, x: np.ndarray, windows: list[float]
+    fig: go.Figure,
+    col: int,
+    pdf: Curve,
+    samples: np.ndarray,
+    x_min: float,
+    x: np.ndarray,
+    windows: list[float],
 ) -> None:
     centers, density = log_binned_density(samples, x_min)
     fig.add_trace(
@@ -102,13 +112,19 @@ def add_log_log(
             y=density,
             mode="markers",
             name=f"{len(samples):,} samples, log bins",
-            marker=dict(color="gray", size=8),
+            marker={"color": "gray", "size": 8},
         ),
         row=1,
         col=col,
     )
     fig.add_trace(
-        go.Scatter(x=x, y=pdf(x), mode="lines", name="Y = log k - α · X", line=dict(color="black", width=2)),
+        go.Scatter(
+            x=x,
+            y=pdf(x),
+            mode="lines",
+            name="Y = log k - α · X",
+            line={"color": "black", "width": 2},
+        ),
         row=1,
         col=col,
     )
@@ -116,15 +132,29 @@ def add_log_log(
     for x0, color in zip(windows, WINDOW_COLORS):
         xw = np.logspace(np.log10(x0), np.log10(10 * x0), 50)
         fig.add_trace(
-            go.Scatter(x=xw, y=pdf(xw), mode="lines", line=dict(color=color, width=8), opacity=0.5, legendgroup=str(x0), showlegend=False),
+            go.Scatter(
+                x=xw,
+                y=pdf(xw),
+                mode="lines",
+                line={"color": color, "width": 8},
+                opacity=0.5,
+                legendgroup=str(x0),
+                showlegend=False,
+            ),
             row=1,
             col=col,
         )
-    fig.update_xaxes(title_text="x  (log scale)", type="log", exponentformat="power", row=1, col=col)
-    fig.update_yaxes(title_text="p(x)  (log scale)", type="log", exponentformat="power", row=1, col=col)
+    fig.update_xaxes(
+        title_text="x  (log scale)", type="log", exponentformat="power", row=1, col=col
+    )
+    fig.update_yaxes(
+        title_text="p(x)  (log scale)", type="log", exponentformat="power", row=1, col=col
+    )
 
 
-def add_scale_free(fig: go.Figure, col: int, pdf: Curve, windows: list[float], n: int = 500) -> None:
+def add_scale_free(
+    fig: go.Figure, col: int, pdf: Curve, windows: list[float], n: int = 500
+) -> None:
     ratio = np.linspace(1, 10, n)  # x / x0
     # every window collapses onto the same curve, wider lines underneath so all stay visible
     widths = np.linspace(10, 2, len(windows))
@@ -135,7 +165,7 @@ def add_scale_free(fig: go.Figure, col: int, pdf: Curve, windows: list[float], n
                 y=pdf(x0 * ratio) / pdf(np.asarray(x0)),
                 mode="lines",
                 name=f"window [{x0:g}, {10 * x0:g}]",
-                line=dict(color=color, width=width),
+                line={"color": color, "width": width},
                 legendgroup=str(x0),
             ),
             row=1,
@@ -179,7 +209,7 @@ def plot_log_log(
         ),
         height=450,
         width=1400,
-        legend=dict(orientation="h", y=-0.2),
+        legend={"orientation": "h", "y": -0.2},
     )
     return fig
 
@@ -223,7 +253,9 @@ def plot_alpha_comparison(
         subplot_titles=[p[-1] for p in panels] if len(panels) > 1 else None,
         horizontal_spacing=0.08,
     )
-    for col, (panel_curve, xs, panel_log_x, panel_log_y, panel_y_title, _) in enumerate(panels, start=1):
+    for col, (panel_curve, xs, panel_log_x, panel_log_y, panel_y_title, _) in enumerate(
+        panels, start=1
+    ):
         for alpha, color, symbol in zip(sorted(alphas), ALPHA_COLORS, ALPHA_SYMBOLS):
             fig.add_trace(
                 go.Scatter(
@@ -233,28 +265,47 @@ def plot_alpha_comparison(
                     name=label(alpha),
                     legendgroup=str(alpha),
                     showlegend=col == 1,
-                    line=dict(color=color, width=2, dash="dash" if dashed(alpha) else "solid"),
-                    marker=dict(symbol=symbol, size=8, color=color, maxdisplayed=12),
+                    line={"color": color, "width": 2, "dash": "dash" if dashed(alpha) else "solid"},
+                    marker={"symbol": symbol, "size": 8, "color": color, "maxdisplayed": 12},
                     hovertemplate=f"{label(alpha)}<br>{x_title} = %{{x:.3g}}<br>{panel_y_title} = %{{y:.3g}}<extra></extra>",
                 ),
                 row=1,
                 col=col,
             )
         if panel_log_x:
-            fig.update_xaxes(title_text=f"{x_title}  (log scale)", type="log", exponentformat="power", row=1, col=col)
+            fig.update_xaxes(
+                title_text=f"{x_title}  (log scale)",
+                type="log",
+                exponentformat="power",
+                row=1,
+                col=col,
+            )
         else:
             fig.update_xaxes(title_text=x_title, range=[0, xs.max()], row=1, col=col)
         if panel_log_y:
-            fig.update_yaxes(title_text=f"{panel_y_title}  (log scale)", type="log", exponentformat="power", row=1, col=col)
+            fig.update_yaxes(
+                title_text=f"{panel_y_title}  (log scale)",
+                type="log",
+                exponentformat="power",
+                row=1,
+                col=col,
+            )
         elif linear_panel and col == 1:
             fig.update_yaxes(title_text=panel_y_title, rangemode="tozero", row=1, col=col)
         else:
             fig.update_yaxes(title_text=panel_y_title, range=[0, 1.05], row=1, col=col)
-    fig.update_layout(title=title, hovermode="x unified", height=450, width=900 if len(panels) == 1 else 1400, template="plotly_white")
+    fig.update_layout(
+        title=title,
+        hovermode="x unified",
+        height=450,
+        width=900 if len(panels) == 1 else 1400,
+        template="plotly_white",
+    )
     return fig
 
 
 SAMPLE_COLORS = ("#2a78d6", "#eb6834", "#1baf7a", "#4a3aa7", "#e34948")
+
 
 def auto_linear_bins(samples: np.ndarray, max_bins: int = 10_000) -> int:
     q25, q75 = np.percentile(samples, [25, 75])
@@ -271,7 +322,12 @@ def add_fit(fig: go.Figure, row: int, col: int, x: np.ndarray, y: np.ndarray, co
     slope, intercept = fit_log_log(x, y)
     x_fit = np.logspace(np.log10(x.min()), np.log10(x.max()), 500)
     fig.add_trace(
-        go.Scatter(x=x_fit, y=10**intercept * x_fit**slope, mode="lines", line=dict(color=color, width=3, dash="dash")),
+        go.Scatter(
+            x=x_fit,
+            y=10**intercept * x_fit**slope,
+            mode="lines",
+            line={"color": color, "width": 3, "dash": "dash"},
+        ),
         row=row,
         col=col,
     )
@@ -284,7 +340,7 @@ def add_fit(fig: go.Figure, row: int, col: int, x: np.ndarray, y: np.ndarray, co
         xanchor="right",
         yanchor="top",
         showarrow=False,
-        font=dict(color=color),
+        font={"color": color},
         row=row,
         col=col,
     )
@@ -303,13 +359,17 @@ def plot_binning_comparison(
     fig = make_subplots(
         rows=len(sizes),
         cols=3,
-        subplot_titles=["linear bins, density", "log bins, density", "CCDF  1 - F(x) at log bin edges"]
+        subplot_titles=[
+            "linear bins, density",
+            "log bins, density",
+            "CCDF  1 - F(x) at log bin edges",
+        ]
         + [""] * 3 * (len(sizes) - 1),
         vertical_spacing=0.06,
         horizontal_spacing=0.06,
     )
     color = SAMPLE_COLORS[0]
-    true_style = dict(color="black", width=2)
+    true_style = {"color": "black", "width": 2}
     x_true = np.logspace(np.log10(x_min), np.log10(max(s.max() for s in samples.values())), 500)
 
     for row, n in enumerate(sizes, start=1):
@@ -328,11 +388,25 @@ def plot_binning_comparison(
 
         panels = ((lin_x, lin_y, pdf), (log_x, log_y, pdf), (ccdf_x, ccdf_y, ccdf))
         for col, (x, y, true) in enumerate(panels, start=1):
-            fig.add_trace(go.Scatter(x=x_true, y=true(x_true), mode="lines", line=true_style), row=row, col=col)
-            fig.add_trace(go.Scatter(x=x, y=y, mode="markers", marker=dict(color=color, size=8)), row=row, col=col)
+            fig.add_trace(
+                go.Scatter(x=x_true, y=true(x_true), mode="lines", line=true_style),
+                row=row,
+                col=col,
+            )
+            fig.add_trace(
+                go.Scatter(x=x, y=y, mode="markers", marker={"color": color, "size": 8}),
+                row=row,
+                col=col,
+            )
             add_fit(fig, row, col, x, y, color)
             fig.update_xaxes(type="log", exponentformat="power", matches="x", row=row, col=col)
-            fig.update_yaxes(type="log", exponentformat="power", matches="y3" if col == 3 else "y", row=row, col=col)
+            fig.update_yaxes(
+                type="log",
+                exponentformat="power",
+                matches="y3" if col == 3 else "y",
+                row=row,
+                col=col,
+            )
 
         # a linear bin holding a single sample has density 1 / (N · Δx), the tail cannot go lower
         floor = 1 / (n * width)
@@ -345,7 +419,7 @@ def plot_binning_comparison(
             yanchor="top",
             xanchor="left",
             showarrow=False,
-            font=dict(size=11, color="#555"),
+            font={"size": 11, "color": "#555"},
             row=row,
             col=1,
         )
@@ -383,18 +457,27 @@ def plot_alpha_estimates(
             go.Scatter(
                 x=sizes,
                 y=[by_n[n] for n in sizes],
-                error_y=dict(array=[errors[method][n] for n in sizes], color=color) if method in errors else None,
+                error_y={"array": [errors[method][n] for n in sizes], "color": color}
+                if method in errors
+                else None,
                 mode="lines+markers",
                 name=method,
-                line=dict(color=color, width=2),
-                marker=dict(symbol=symbol, size=10, color=color),
+                line={"color": color, "width": 2},
+                marker={"symbol": symbol, "size": 10, "color": color},
                 hovertemplate=f"{method}<br>N = %{{x:,}}<br>α̂ = %{{y:.3f}}<extra></extra>",
             )
         )
-    fig.add_hline(y=true_alpha, line_dash="dash", line_color="black", annotation_text=f"true α = {true_alpha:g}")
+    fig.add_hline(
+        y=true_alpha,
+        line_dash="dash",
+        line_color="black",
+        annotation_text=f"true α = {true_alpha:g}",
+    )
     fig.update_xaxes(title_text="sample size N  (log scale)", type="log", exponentformat="power")
     fig.update_yaxes(title_text="estimated α̂")
-    fig.update_layout(title="Estimated α vs sample size", height=450, width=900, template="plotly_white")
+    fig.update_layout(
+        title="Estimated α vs sample size", height=450, width=900, template="plotly_white"
+    )
     return fig
 
 
@@ -418,8 +501,8 @@ def plot_moments(
                     name=f"α = {alpha:g}",
                     legendgroup=str(alpha),
                     showlegend=col == 1,
-                    line=dict(color=color, width=2),
-                    marker=dict(symbol=symbol, size=8, color=color, maxdisplayed=12),
+                    line={"color": color, "width": 2},
+                    marker={"symbol": symbol, "size": 8, "color": color, "maxdisplayed": 12},
                     hovertemplate=f"α = {alpha:g}<br>n = %{{x:,}}<br>{stat} = %{{y:.4g}}<extra></extra>",
                 ),
                 row=1,
@@ -435,7 +518,7 @@ def plot_moments(
                         name=f"α = {alpha:g} true",
                         legendgroup=str(alpha),
                         showlegend=False,
-                        line=dict(color=color, width=1.5, dash="dash"),
+                        line={"color": color, "width": 1.5, "dash": "dash"},
                         hovertemplate=f"α = {alpha:g} true {stat} = {true:.4g}<extra></extra>",
                     ),
                     row=1,
@@ -443,7 +526,9 @@ def plot_moments(
                 )
     fig.update_xaxes(title_text="sample size n  (log scale)", type="log", exponentformat="power")
     for col, stat in enumerate(stats, start=1):
-        fig.update_yaxes(title_text=f"{stat}  (log scale)", type="log", exponentformat="power", row=1, col=col)
+        fig.update_yaxes(
+            title_text=f"{stat}  (log scale)", type="log", exponentformat="power", row=1, col=col
+        )
     fig.update_layout(
         title="Sample statistics vs sample size<br><sup>solid: running value on one sample, dashed: true value (missing where it is infinite)</sup>",
         height=500,
@@ -457,21 +542,38 @@ MODEL_COLORS = {"power law": "#3a6ea5", "normal": "#e76f51", "data": "#b8afa4"}
 SURFACE = "#fcfcfb"
 INK = {"primary": "#0b0b0b", "secondary": "#52514e", "muted": "#898781"}
 GUIDE = "#b5b3ab"
-REFERENCE_LINE = dict(line_dash="dash", line_color=GUIDE, line_width=1)
-RING = dict(color=SURFACE, width=1)
+REFERENCE_LINE = {"line_dash": "dash", "line_color": GUIDE, "line_width": 1}
+RING = {"color": SURFACE, "width": 1}
 
 REAL_WORLD_TEMPLATE = go.layout.Template(
-    layout=dict(
-        font=dict(family="system-ui, -apple-system, Segoe UI, sans-serif", color=INK["secondary"]),
-        title_font=dict(color=INK["primary"]),
-        paper_bgcolor=SURFACE,
-        plot_bgcolor=SURFACE,
-        xaxis=dict(gridcolor="#e1e0d9", linecolor="#c3c2b7", zerolinecolor="#c3c2b7", tickcolor="#c3c2b7", showline=True, ticks="outside"),
-        yaxis=dict(gridcolor="#e1e0d9", linecolor="#c3c2b7", zerolinecolor="#c3c2b7", tickcolor="#c3c2b7", showline=True, ticks="outside"),
-        hoverlabel=dict(bgcolor="white", font_color=INK["primary"]),
-    )
+    layout={
+        "font": {
+            "family": "system-ui, -apple-system, Segoe UI, sans-serif",
+            "color": INK["secondary"],
+        },
+        "title_font": {"color": INK["primary"]},
+        "paper_bgcolor": SURFACE,
+        "plot_bgcolor": SURFACE,
+        "xaxis": {
+            "gridcolor": "#e1e0d9",
+            "linecolor": "#c3c2b7",
+            "zerolinecolor": "#c3c2b7",
+            "tickcolor": "#c3c2b7",
+            "showline": True,
+            "ticks": "outside",
+        },
+        "yaxis": {
+            "gridcolor": "#e1e0d9",
+            "linecolor": "#c3c2b7",
+            "zerolinecolor": "#c3c2b7",
+            "tickcolor": "#c3c2b7",
+            "showline": True,
+            "ticks": "outside",
+        },
+        "hoverlabel": {"bgcolor": "white", "font_color": INK["primary"]},
+    }
 )
-LOG_AXIS = dict(type="log", dtick=1, exponentformat="power")
+LOG_AXIS = {"type": "log", "dtick": 1, "exponentformat": "power"}
 
 
 def plot_population_histogram(population: np.ndarray, bins: int = 100) -> go.Figure:
@@ -484,7 +586,7 @@ def plot_population_histogram(population: np.ndarray, bins: int = 100) -> go.Fig
             x=np.sqrt(edges[:-1] * edges[1:]),
             y=counts,
             width=np.diff(edges),
-            marker=dict(color=MODEL_COLORS["data"], line=dict(color=SURFACE, width=1)),
+            marker={"color": MODEL_COLORS["data"], "line": {"color": SURFACE, "width": 1}},
             showlegend=False,
         )
     )
@@ -514,7 +616,9 @@ def plot_population_histogram(population: np.ndarray, bins: int = 100) -> go.Fig
     return fig
 
 
-def plot_rank_survival(sizes: np.ndarray, names: list[str], alpha: float, x_min: float) -> go.Figure:
+def plot_rank_survival(
+    sizes: np.ndarray, names: list[str], alpha: float, x_min: float
+) -> go.Figure:
     n = len(sizes)
     rank = np.arange(1, n + 1)
     survival = rank / n  # P(X >= x)
@@ -522,19 +626,85 @@ def plot_rank_survival(sizes: np.ndarray, names: list[str], alpha: float, x_min:
     # the fit only describes x >= x_min, scale it by the tail's share to sit on the data
     x_fit = np.logspace(np.log10(x_min), np.log10(sizes[0]), 200)
     fitted = (sizes >= x_min).mean() * (x_fit / x_min) ** (1 - alpha)
-    data = dict(mode="markers", marker=dict(size=6, color=MODEL_COLORS["data"], opacity=0.8), text=names)
+    data = {
+        "mode": "markers",
+        "marker": {"size": 6, "color": MODEL_COLORS["data"], "opacity": 0.8},
+        "text": names,
+    }
 
-    fig = make_subplots(rows=1, cols=3, subplot_titles=("Zipf plot: size vs rank", "Survival function P(X ≥ x)", "Sum share of the top fraction"))
-    fig.add_trace(go.Scatter(x=rank, y=sizes, name="municipalities", hovertemplate="%{text}<br>%{y:,}<extra></extra>", **data), row=1, col=1)
-    fig.add_trace(go.Scatter(x=sizes, y=survival, showlegend=False, hovertemplate="%{text}<br>%{x:,}<extra></extra>", **data), row=1, col=2)
+    fig = make_subplots(
+        rows=1,
+        cols=3,
+        subplot_titles=(
+            "Zipf plot: size vs rank",
+            "Survival function P(X ≥ x)",
+            "Sum share of the top fraction",
+        ),
+    )
     fig.add_trace(
-        go.Scatter(x=x_fit, y=fitted, mode="lines", line=dict(color=MODEL_COLORS["power law"], width=2), name=f"power law, α = {alpha:.2f}"),
+        go.Scatter(
+            x=rank,
+            y=sizes,
+            name="municipalities",
+            hovertemplate="%{text}<br>%{y:,}<extra></extra>",
+            **data,
+        ),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=sizes,
+            y=survival,
+            showlegend=False,
+            hovertemplate="%{text}<br>%{x:,}<extra></extra>",
+            **data,
+        ),
         row=1,
         col=2,
     )
-    fig.add_vline(x=x_min, line_dash="dot", line_color=GUIDE, line_width=1, annotation_text=f"x_min = {x_min:,.0f}", row=1, col=2)
-    fig.add_trace(go.Scatter(x=survival, y=share, mode="lines", line=dict(color=MODEL_COLORS["data"], width=2), showlegend=False), row=1, col=3)
-    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode="lines", line=dict(dash="dot", color=GUIDE, width=1), name="equality"), row=1, col=3)
+    fig.add_trace(
+        go.Scatter(
+            x=x_fit,
+            y=fitted,
+            mode="lines",
+            line={"color": MODEL_COLORS["power law"], "width": 2},
+            name=f"power law, α = {alpha:.2f}",
+        ),
+        row=1,
+        col=2,
+    )
+    fig.add_vline(
+        x=x_min,
+        line_dash="dot",
+        line_color=GUIDE,
+        line_width=1,
+        annotation_text=f"x_min = {x_min:,.0f}",
+        row=1,
+        col=2,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=survival,
+            y=share,
+            mode="lines",
+            line={"color": MODEL_COLORS["data"], "width": 2},
+            showlegend=False,
+        ),
+        row=1,
+        col=3,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[0, 1],
+            y=[0, 1],
+            mode="lines",
+            line={"dash": "dot", "color": GUIDE, "width": 1},
+            name="equality",
+        ),
+        row=1,
+        col=3,
+    )
     fig.add_vline(x=0.2, row=1, col=3, **REFERENCE_LINE)
     fig.add_hline(y=0.8, row=1, col=3, **REFERENCE_LINE)
 
@@ -542,19 +712,25 @@ def plot_rank_survival(sizes: np.ndarray, names: list[str], alpha: float, x_min:
     fig.update_yaxes(title_text="inhabitants (log scale)", row=1, col=1, **LOG_AXIS)
     fig.update_xaxes(title_text="inhabitants x (log scale)", row=1, col=2, **LOG_AXIS)
     fig.update_yaxes(title_text="P(X ≥ x) (log scale)", row=1, col=2, **LOG_AXIS)
-    fig.update_xaxes(title_text="top fraction of municipalities", tickformat=".0%", range=[0, 1], row=1, col=3)
-    fig.update_yaxes(title_text="share of population", tickformat=".0%", range=[0, 1.02], row=1, col=3)
+    fig.update_xaxes(
+        title_text="top fraction of municipalities", tickformat=".0%", range=[0, 1], row=1, col=3
+    )
+    fig.update_yaxes(
+        title_text="share of population", tickformat=".0%", range=[0, 1.02], row=1, col=3
+    )
     fig.update_layout(
         title=f"Power law fit, α = {alpha:.2f} above x_min = {x_min:,.0f}<br><sup>top 20% of municipalities hold {share[int(0.2 * n) - 1]:.1%} of the population</sup>",
         height=450,
         width=1400,
-        legend=dict(orientation="h", y=-0.2),
+        legend={"orientation": "h", "y": -0.2},
         template=REAL_WORLD_TEMPLATE,
     )
     return fig
 
 
-def plot_tail_comparison(tail: np.ndarray, names: list[str], x_min: float, models: dict[str, dict]) -> go.Figure:
+def plot_tail_comparison(
+    tail: np.ndarray, names: list[str], x_min: float, models: dict[str, dict]
+) -> go.Figure:
     n = len(tail)
     survival = 1 - (np.arange(1, n + 1) - 0.5) / n  # plotting positions
     x_fit = np.logspace(np.log10(x_min), np.log10(tail[-1]), 300)
@@ -563,14 +739,18 @@ def plot_tail_comparison(tail: np.ndarray, names: list[str], x_min: float, model
         rows=1,
         cols=3,
         column_widths=[0.37, 0.37, 0.26],
-        subplot_titles=("Survival within the tail P(X ≥ x | X ≥ x_min)", "Q-Q plot: model quantile vs observed", "Total population of the tail"),
+        subplot_titles=(
+            "Survival within the tail P(X ≥ x | X ≥ x_min)",
+            "Q-Q plot: model quantile vs observed",
+            "Total population of the tail",
+        ),
     )
     fig.add_trace(
         go.Scatter(
             x=tail,
             y=survival,
             mode="markers",
-            marker=dict(size=7, color=MODEL_COLORS["data"], opacity=0.8),
+            marker={"size": 7, "color": MODEL_COLORS["data"], "opacity": 0.8},
             name="municipalities",
             text=names,
             hovertemplate="%{text}<br>%{x:,}<extra></extra>",
@@ -579,24 +759,38 @@ def plot_tail_comparison(tail: np.ndarray, names: list[str], x_min: float, model
         col=1,
     )
     for name, model in models.items():
-        line = dict(color=MODEL_COLORS[name], width=2)
-        fig.add_trace(go.Scatter(x=x_fit, y=model["sf"](x_fit), mode="lines", line=line, name=name, legendgroup=name), row=1, col=1)
+        line = {"color": MODEL_COLORS[name], "width": 2}
+        fig.add_trace(
+            go.Scatter(
+                x=x_fit, y=model["sf"](x_fit), mode="lines", line=line, name=name, legendgroup=name
+            ),
+            row=1,
+            col=1,
+        )
         fig.add_trace(
             go.Scatter(
                 x=tail,
                 y=model["isf"](survival),
                 mode="markers",
-                marker=dict(size=7, color=line["color"], opacity=0.6),
+                marker={"size": 7, "color": line["color"], "opacity": 0.6},
                 legendgroup=name,
                 showlegend=False,
                 text=names,
-                hovertemplate="%{text}<br>observed %{x:,}<br>" + name + " expects %{y:,.0f}<extra></extra>",
+                hovertemplate="%{text}<br>observed %{x:,}<br>"
+                + name
+                + " expects %{y:,.0f}<extra></extra>",
             ),
             row=1,
             col=2,
         )
     fig.add_trace(
-        go.Scatter(x=[x_min, tail[-1]], y=[x_min, tail[-1]], mode="lines", line=dict(dash="dash", color=GUIDE, width=1), name="perfect fit"),
+        go.Scatter(
+            x=[x_min, tail[-1]],
+            y=[x_min, tail[-1]],
+            mode="lines",
+            line={"dash": "dash", "color": GUIDE, "width": 1},
+            name="perfect fit",
+        ),
         row=1,
         col=2,
     )
@@ -605,9 +799,14 @@ def plot_tail_comparison(tail: np.ndarray, names: list[str], x_min: float, model
         go.Bar(
             x=list(totals),
             y=list(totals.values()),
-            marker=dict(color=[MODEL_COLORS.get(name, MODEL_COLORS["data"]) for name in totals], line=dict(color=SURFACE, width=2)),
+            marker={
+                "color": [MODEL_COLORS.get(name, MODEL_COLORS["data"]) for name in totals],
+                "line": {"color": SURFACE, "width": 2},
+            },
             width=0.5,
-            text=[f"{total / 1e6:.1f} M<br>({total / tail.sum():.0%})" for total in totals.values()],
+            text=[
+                f"{total / 1e6:.1f} M<br>({total / tail.sum():.0%})" for total in totals.values()
+            ],
             textposition="outside",
             showlegend=False,
         ),
@@ -616,15 +815,25 @@ def plot_tail_comparison(tail: np.ndarray, names: list[str], x_min: float, model
     )
 
     fig.update_xaxes(title_text="inhabitants x (log scale)", row=1, col=1, **LOG_AXIS)
-    fig.update_yaxes(title_text="P(X ≥ x | X ≥ x_min) (log scale)", range=[np.log10(0.5 / n), 0.05], row=1, col=1, **LOG_AXIS)
+    fig.update_yaxes(
+        title_text="P(X ≥ x | X ≥ x_min) (log scale)",
+        range=[np.log10(0.5 / n), 0.05],
+        row=1,
+        col=1,
+        **LOG_AXIS,
+    )
     fig.update_xaxes(title_text="observed inhabitants (log scale)", row=1, col=2, **LOG_AXIS)
-    fig.update_yaxes(title_text="inhabitants expected by the model (log scale)", row=1, col=2, **LOG_AXIS)
-    fig.update_yaxes(title_text="inhabitants in the tail", range=[0, max(totals.values()) * 1.25], row=1, col=3)
+    fig.update_yaxes(
+        title_text="inhabitants expected by the model (log scale)", row=1, col=2, **LOG_AXIS
+    )
+    fig.update_yaxes(
+        title_text="inhabitants in the tail", range=[0, max(totals.values()) * 1.25], row=1, col=3
+    )
     fig.update_layout(
         title=f"Power law vs normal on the {n:,} municipalities with x ≥ {x_min:,.0f}<br><sup>normal: μ, σ from all municipalities, conditioned on x ≥ x_min</sup>",
         height=480,
         width=1400,
-        legend=dict(orientation="h", y=-0.2),
+        legend={"orientation": "h", "y": -0.2},
         template=REAL_WORLD_TEMPLATE,
     )
     return fig
@@ -642,9 +851,29 @@ def band(experiment: pl.DataFrame, column: str) -> pl.DataFrame:
 def add_band(fig: go.Figure, frame: pl.DataFrame, color: str, name: str, col: int) -> None:
     x = frame["sample_size"].to_list()
     rgb = ", ".join(str(int(color[i : i + 2], 16)) for i in (1, 3, 5))
-    fig.add_trace(go.Scatter(x=x, y=frame["high"].to_list(), mode="lines", line_width=0, showlegend=False, hoverinfo="skip"), row=1, col=col)
     fig.add_trace(
-        go.Scatter(x=x, y=frame["low"].to_list(), mode="lines", line_width=0, fill="tonexty", fillcolor=f"rgba({rgb}, 0.15)", showlegend=False, hoverinfo="skip"),
+        go.Scatter(
+            x=x,
+            y=frame["high"].to_list(),
+            mode="lines",
+            line_width=0,
+            showlegend=False,
+            hoverinfo="skip",
+        ),
+        row=1,
+        col=col,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=frame["low"].to_list(),
+            mode="lines",
+            line_width=0,
+            fill="tonexty",
+            fillcolor=f"rgba({rgb}, 0.15)",
+            showlegend=False,
+            hoverinfo="skip",
+        ),
         row=1,
         col=col,
     )
@@ -653,8 +882,8 @@ def add_band(fig: go.Figure, frame: pl.DataFrame, color: str, name: str, col: in
             x=x,
             y=frame["mean"].to_list(),
             mode="lines+markers",
-            line=dict(color=color, width=2),
-            marker=dict(size=8, line=RING),
+            line={"color": color, "width": 2},
+            marker={"size": 8, "line": RING},
             name=name,
             showlegend=False,
             customdata=frame["std"].to_list(),
@@ -671,7 +900,9 @@ SAMPLE_SIZE_AXIS = dict(title_text="sample size n (log scale)", **LOG_AXIS)
 def plot_sample_parameters(experiment: pl.DataFrame, full_data: dict) -> go.Figure:
     repeats = experiment.filter(pl.col("sample_size") == experiment["sample_size"].min()).height
     parameters = (("alpha", "α"), ("x_min", "x_min"))
-    fig = make_subplots(rows=1, cols=2, subplot_titles=[f"Fitted {label}" for _, label in parameters])
+    fig = make_subplots(
+        rows=1, cols=2, subplot_titles=[f"Fitted {label}" for _, label in parameters]
+    )
     for col, (column, label) in enumerate(parameters, start=1):
         add_band(fig, band(experiment, column), MODEL_COLORS["power law"], label, col=col)
         fig.add_hline(
