@@ -171,26 +171,7 @@
   <div class="source">M. E. J. Newman, “Power laws, Pareto distributions and Zipf’s law”, Contemporary Physics 46 (2005).</div>
 </section>
 
-<!-- 5 · No finite moments -->
-<section class="slide">
-  <div class="kicker">The weird part</div>
-  <h2>No average, no deviation</h2>
-  <div class="cols wide-right">
-    <div>
-      <ul>
-        <li>The <strong>mean</strong> and <strong>standard deviation</strong> can be infinite.</li>
-        <li>Power law mean is finite only for <strong>α &gt; 2</strong>, variance only for <strong>α &gt; 3</strong>.</li>
-      </ul>
-    </div>
-    <div>
-      <div class="legend"><span style="--c:var(--normal)">normal <span class="params">(μ = 3, σ = 1)</span></span><span style="--c:var(--power-2)">finite mean <span class="params">(α = 2.5, <i>x</i><sub>min</sub> = 1)</span></span><span style="--c:var(--power)">infinite mean <span class="params">(α = 1.8, <i>x</i><sub>min</sub> = 1.25)</span></span></div>
-      <div class="chart" id="chart-mean"></div>
-      <button class="ghost" id="resample">Draw new samples</button>
-    </div>
-  </div>
-</section>
-
-<!-- 6 · Equation -->
+<!-- 5 · Equation -->
 <section class="slide">
   <div class="kicker">Normal vs. power law</div>
   <h2>No characteristic value</h2>
@@ -207,6 +188,25 @@
       <div class="legend"><span style="--c:var(--normal)">normal <span class="params">(μ = 1, σ = 2)</span></span><span style="--c:var(--power)">power law <span class="params">(α = 3, <i>x</i><sub>min</sub> = 1)</span></span></div>
       <div class="chart" id="chart-loglog"></div>
       <p style="font-size:16px; margin:6px 0 0 56px">Power law = straight line on a log-log plot, with slope −α.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · No finite moments -->
+<section class="slide">
+  <div class="kicker">The weird part</div>
+  <h2>No average, no deviation</h2>
+  <div class="cols wide-right">
+    <div>
+      <ul>
+        <li>The <strong>mean</strong> and <strong>standard deviation</strong> can be infinite.</li>
+        <li>Power law mean is finite only for <strong>α &gt; 2</strong>, variance only for <strong>α &gt; 3</strong>.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="legend"><span style="--c:var(--normal)">normal <span class="params">(μ = 3, σ = 1)</span></span><span style="--c:var(--power-2)">finite mean <span class="params">(α = 2.5, <i>x</i><sub>min</sub> = 1)</span></span><span style="--c:var(--power)">infinite mean <span class="params">(α = 1.8, <i>x</i><sub>min</sub> = 1.25)</span></span></div>
+      <div class="chart" id="chart-mean"></div>
+      <button class="ghost" id="resample">Draw new samples</button>
     </div>
   </div>
 </section>
