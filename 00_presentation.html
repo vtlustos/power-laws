@@ -44,8 +44,8 @@
   .chart text { font-family: inherit; }
   .tooltip { position: absolute; pointer-events: none; background: var(--text-primary); color: #fff;
     font-size: 13px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity .1s; }
-  .legend { display: flex; gap: 18px; font-size: 14px; color: var(--text-secondary); margin: 0 0 6px 56px; }
-  .legend span::before { content: ""; display: inline-block; width: 14px; height: 3px; border-radius: 2px;
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 14px; color: var(--text-secondary); margin: 0 0 6px 56px; }
+  .legend > span::before { content: ""; display: inline-block; width: 14px; height: 3px; border-radius: 2px;
     background: var(--c); vertical-align: middle; margin-right: 6px; }
   .callout { background: #fdf0ea; border-left: 4px solid var(--power); padding: 12px 16px; border-radius: 6px; font-size: 19px; color: var(--text-primary); }
   .callout.blue { background: #eaf2fc; border-left-color: var(--normal); }
@@ -67,6 +67,20 @@
     border-radius: 6px; padding: 3px 10px; cursor: pointer; margin-left: 56px; }
   .title-slide { justify-content: center; }
   .title-slide p { font-size: 26px; max-width: 760px; }
+  .hero { display: grid; grid-template-columns: 6fr 5fr; gap: 40px; align-items: center; flex: 1; min-height: 0; }
+  .hero h1 { font-size: 88px; line-height: .95; letter-spacing: -2px; margin-bottom: 18px; }
+  .hero h1 span { color: var(--power); }
+  .hero .tagline { font-size: 26px; margin: 0 0 28px; max-width: 520px; }
+  .hero .eq { font-size: 30px; margin: 0 0 28px; }
+  .chips { display: flex; gap: 12px; flex-wrap: wrap; }
+  .chip { background: var(--surface-0); border-radius: 999px; padding: 8px 16px; font-size: 16px; color: var(--text-secondary); }
+  .chip b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .hero-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .hero-chart rect.bar { transform-box: fill-box; transform-origin: bottom; animation: grow .7s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes grow { from { transform: scaleY(0); } }
+  .hero-caption { font-size: 14px; color: var(--text-muted); margin: 8px 0 0; text-align: right; }
+  .params { font-size: 13px; color: var(--text-muted); font-weight: 400; }
+  .callout .params { font-size: 15px; }
   .agenda { display: grid; gap: 22px; max-width: 900px; }
   .step { display: grid; grid-template-columns: 64px 1fr; gap: 20px; align-items: center; }
   .step .num { width: 56px; height: 56px; border-radius: 50%; background: var(--power); color: #fff;
@@ -78,10 +92,23 @@
 <div class="deck">
 
 <!-- 1 · Title -->
-<section class="slide title-slide">
-  <div class="kicker">Statistics in the wild</div>
-  <h1>Power Laws</h1>
-  <p>When the extremes are the rule, not the exception.</p>
+<section class="slide">
+  <div class="hero">
+    <div>
+      <div class="kicker">Statistics in the wild</div>
+      <h1>Power<br><span>Laws</span></h1>
+      <p class="tagline">When the extremes are not the exception.</p>
+      <div class="eq">\(p(x) = C\,x^{-\alpha}, \quad x \ge x_{\min}\)</div>
+      <div class="chips">
+        <div class="chip"><b>80 / 20</b> rule</div>
+        <div class="chip"><b>straight line</b> on log-log</div>
+      </div>
+    </div>
+    <div>
+      <div class="hero-chart" id="chart-hero"></div>
+      <p class="hero-caption">Power law, α = 2.1, <i>x</i><sub>min</sub> = 1: a few giants, a long tail of small ones.</p>
+    </div>
+  </div>
 </section>
 
 <!-- 2 · Fat tails -->
@@ -91,58 +118,19 @@
   <div class="cols wide-right">
     <div>
       <ul>
-        <li>Extreme values are <strong>far more common</strong> than the bell curve predicts.</li>
+        <li>Extreme values are <strong>far more common</strong> than the normal distribution predicts.</li>
         <li>They are <strong>part of the data</strong>, not outliers.</li>
       </ul>
-      <p class="callout">At 10× the typical value: normal says 10<sup>−23</sup>, power law says 1 %.</p>
+      <p class="callout">At <i>x</i> = 10: normal (μ = 0, σ = 1) says 10<sup>−23</sup>, power law (α = 3, <i>x</i><sub>min</sub> = 1) says 1 %.</p>
     </div>
     <div>
-      <div class="legend"><span style="--c:var(--normal)">normal</span><span style="--c:var(--power)">power law</span></div>
+      <div class="legend"><span style="--c:var(--normal)">normal <span class="params">(μ = 0, σ = 1)</span></span><span style="--c:var(--power)">power law <span class="params">(α = 3, <i>x</i><sub>min</sub> = 1)</span></span></div>
       <div class="chart" id="chart-tail"></div>
     </div>
   </div>
 </section>
 
-<!-- 3 · No finite moments -->
-<section class="slide">
-  <div class="kicker">The weird part</div>
-  <h2>No average, no deviation</h2>
-  <div class="cols wide-right">
-    <div>
-      <ul>
-        <li>The <strong>mean</strong> and <strong>standard deviation</strong> can be infinite.</li>
-      </ul>
-    </div>
-    <div>
-      <div class="legend"><span style="--c:var(--normal)">normal</span><span style="--c:var(--power-2)">power law, finite mean</span><span style="--c:var(--power)">power law, infinite mean</span></div>
-      <div class="chart" id="chart-mean"></div>
-      <button class="ghost" id="resample">Draw new samples</button>
-    </div>
-  </div>
-</section>
-
-<!-- 4 · Equation -->
-<section class="slide">
-  <div class="kicker">Normal vs. power law</div>
-  <h2>No characteristic value</h2>
-  <div class="cols">
-    <div>
-      <h3 style="color:var(--normal)">Normal</h3>
-      <div class="eq">$$p(x) \propto e^{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2}$$</div>
-      <p>Depends on the <strong>distance from the mean</strong>, in units of σ.</p>
-      <h3 style="color:var(--power); margin-top:18px">Power law</h3>
-      <div class="eq">$$p(x) \propto x^{-\alpha}$$</div>
-      <p>No mean, no σ. <strong>Just x to a constant power.</strong></p>
-    </div>
-    <div>
-      <div class="legend"><span style="--c:var(--normal)">normal</span><span style="--c:var(--power)">power law</span></div>
-      <div class="chart" id="chart-loglog"></div>
-      <p style="font-size:16px; margin:6px 0 0 56px">Power law = straight line on a log-log plot.</p>
-    </div>
-  </div>
-</section>
-
-<!-- 5 · History -->
+<!-- 3 · History -->
 <section class="slide">
   <div class="kicker">A bit of history</div>
   <h2>Who discovered them</h2>
@@ -162,7 +150,7 @@
   </div>
 </section>
 
-<!-- 6 · Examples -->
+<!-- 4 · Examples -->
 <section class="slide">
   <div class="kicker">Real-world examples</div>
   <h2>Power laws are everywhere</h2>
@@ -181,6 +169,46 @@
     <div class="card"><h3>Phone calls</h3><p>A few hubs receive most calls.</p></div>
   </div>
   <div class="source">M. E. J. Newman, “Power laws, Pareto distributions and Zipf’s law”, Contemporary Physics 46 (2005).</div>
+</section>
+
+<!-- 5 · No finite moments -->
+<section class="slide">
+  <div class="kicker">The weird part</div>
+  <h2>No average, no deviation</h2>
+  <div class="cols wide-right">
+    <div>
+      <ul>
+        <li>The <strong>mean</strong> and <strong>standard deviation</strong> can be infinite.</li>
+        <li>Power law mean is finite only for <strong>α &gt; 2</strong>, variance only for <strong>α &gt; 3</strong>.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="legend"><span style="--c:var(--normal)">normal <span class="params">(μ = 3, σ = 1)</span></span><span style="--c:var(--power-2)">finite mean <span class="params">(α = 2.5, <i>x</i><sub>min</sub> = 1)</span></span><span style="--c:var(--power)">infinite mean <span class="params">(α = 1.8, <i>x</i><sub>min</sub> = 1.25)</span></span></div>
+      <div class="chart" id="chart-mean"></div>
+      <button class="ghost" id="resample">Draw new samples</button>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · Equation -->
+<section class="slide">
+  <div class="kicker">Normal vs. power law</div>
+  <h2>No characteristic value</h2>
+  <div class="cols">
+    <div>
+      <h3 style="color:var(--normal)">Normal</h3>
+      <div class="eq">$$p(x) = \frac{1}{\sigma\sqrt{2\pi}}\, e^{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2}$$</div>
+      <p>Depends on the <strong>distance from the mean</strong>, in units of σ.</p>
+      <h3 style="color:var(--power); margin-top:18px">Power law</h3>
+      <div class="eq">$$p(x) = C\,x^{-\alpha}, \quad x \ge x_{\min}$$</div>
+      <p>No mean, no σ. <strong>Just x to a constant power</strong> α, above a threshold <i>x</i><sub>min</sub>.</p>
+    </div>
+    <div>
+      <div class="legend"><span style="--c:var(--normal)">normal <span class="params">(μ = 1, σ = 2)</span></span><span style="--c:var(--power)">power law <span class="params">(α = 3, <i>x</i><sub>min</sub> = 1)</span></span></div>
+      <div class="chart" id="chart-loglog"></div>
+      <p style="font-size:16px; margin:6px 0 0 56px">Power law = straight line on a log-log plot, with slope −α.</p>
+    </div>
+  </div>
 </section>
 
 <!-- 7 · Agenda -->
@@ -210,8 +238,8 @@
     </ul>
     <div>
       <p style="margin-top:0">Chance of a city as big as <strong>Prague</strong>?</p>
-      <p class="callout blue"><strong>Normal:</strong> 10<sup>−1118</sup>, "impossible"</p>
-      <p class="callout"><strong>Power law:</strong> 1 in ~2 000, expected</p>
+      <p class="callout blue"><strong>Normal</strong> <span class="params">(μ = 1 744, σ = 19 473)</span>: 10<sup>−1118</sup>, "impossible"</p>
+      <p class="callout"><strong>Power law</strong> <span class="params">(α = 2.09, <i>x</i><sub>min</sub> = 1 264)</span>: 1 in ~2 000, expected</p>
     </div>
   </div>
   <div class="source">Data: ČSÚ, Počet obyvatel v obcích k 1. 1. 2025.</div>
@@ -347,15 +375,31 @@ const range = (a, b, n, log) => Array.from({ length: n }, (_, i) => log
   ? 10 ** (Math.log10(a) + (Math.log10(b) - Math.log10(a)) * i / (n - 1))
   : a + (b - a) * i / (n - 1));
 
+// ---------- hero: rank-size bars of a power law (α = 2.1, x_min = 1) ----------
+{
+  const n = 40, alpha = 2.1, w = 520, h = 400, gap = 3;
+  const vals = Array.from({ length: n }, (_, i) => (n / (i + 1)) ** (1 / (alpha - 1)));
+  const bw = (w - gap * (n - 1)) / n, top = vals[0];
+  const svg = el("svg", { viewBox: `0 0 ${w} ${h + 28}`, role: "img", "aria-label": "Rank-size bars of a power law" }, document.getElementById("chart-hero"));
+  vals.forEach((v, i) => {
+    const bh = Math.max(2, (h - 10) * v / top);
+    const r = el("rect", { class: "bar", x: i * (bw + gap), y: h - bh, width: bw, height: bh, rx: 2,
+      fill: i < 4 ? "var(--power)" : "var(--axis)" }, svg);
+    r.style.animationDelay = `${i * 18}ms`;
+  });
+  el("line", { x1: 0, x2: w, y1: h, y2: h, stroke: "var(--axis)" }, svg);
+  el("text", { x: 0, y: h + 22, "font-size": 14, fill: "var(--text-secondary)" }, svg).textContent = "rank: largest → smallest";
+}
+
 // ---------- chart 1: survival function ----------
 {
   const xs = range(1, 10, 200);
   lineChart(document.getElementById("chart-tail"), {
     series: [
-      { name: "normal", color: "var(--normal)", points: xs.map(x => [x, normalSf(x)]) },
-      { name: "power law", color: "var(--power)", points: xs.map(x => [x, x ** -2]) },
+      { name: "normal (μ=0, σ=1)", color: "var(--normal)", points: xs.map(x => [x, normalSf(x)]) },
+      { name: "power law (α=3, xmin=1)", color: "var(--power)", points: xs.map(x => [x, x ** -2]) },
     ],
-    x: { domain: [1, 10], ticks: [1, 2, 4, 6, 8, 10], label: String, title: "x (multiples of the typical value)", short: "x" },
+    x: { domain: [1, 10], ticks: [1, 2, 4, 6, 8, 10], label: String, title: "x", short: "x" },
     y: { log: true, domain: [1e-24, 1], ticks: [0, -4, -8, -12, -16, -20, -24].map(n => 10 ** n),
       label: t => pow10(Math.round(Math.log10(t))), title: "P(X ≥ x)  (log scale)" },
   });
@@ -376,9 +420,9 @@ function drawMean(seed) {
   }
   lineChart(document.getElementById("chart-mean"), {
     series: [
-      { name: "normal", color: "var(--normal)", points: pts[0] },
-      { name: "finite mean", color: "var(--power-2)", points: pts[1] },
-      { name: "infinite mean", color: "var(--power)", points: pts[2] },
+      { name: "normal (μ=3, σ=1)", color: "var(--normal)", points: pts[0] },
+      { name: "power law (α=2.5, xmin=1)", color: "var(--power-2)", points: pts[1] },
+      { name: "power law (α=1.8, xmin=1.25)", color: "var(--power)", points: pts[2] },
     ],
     x: { log: true, domain: [1, N], ticks: [0, 1, 2, 3, 4, 5].map(n => 10 ** n),
       label: t => pow10(Math.round(Math.log10(t))), title: "number of samples n  (log scale)", short: "n" },
@@ -395,8 +439,8 @@ document.getElementById("resample").addEventListener("click", () => drawMean(++s
   const xs = range(1, 100, 200, true);
   lineChart(document.getElementById("chart-loglog"), {
     series: [
-      { name: "normal", color: "var(--normal)", points: xs.map(x => [x, normalPdf((x - 1) / 2) / 2]) },
-      { name: "power law", color: "var(--power)", points: xs.map(x => [x, 2 * x ** -3]) },
+      { name: "normal (μ=1, σ=2)", color: "var(--normal)", points: xs.map(x => [x, normalPdf((x - 1) / 2) / 2]) },
+      { name: "power law (α=3, xmin=1)", color: "var(--power)", points: xs.map(x => [x, 2 * x ** -3]) },
     ],
     x: { log: true, domain: [1, 100], ticks: [1, 10, 100], label: t => pow10(Math.round(Math.log10(t))), title: "x  (log scale)", short: "x" },
     y: { log: true, domain: [1e-10, 1], ticks: [0, -2, -4, -6, -8, -10].map(n => 10 ** n),
